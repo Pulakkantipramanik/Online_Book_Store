@@ -19,30 +19,36 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Start SonarQube with Auto-Creation Enabled
+    - name: Start SonarQube with Pre-configured Token
       run: |
+        # Start SonarQube with initial admin token
         docker run -d --name sonarqube -p 9000:9000 \
+          -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true \
           -e SONAR_FORCEAUTHENTICATION=false \
-          -e sonar.web.javaAdditionalOpts=-Dsonar.forceAuthentication=false \
           sonarqube:community
         echo "Waiting for SonarQube to start..."
         sleep 120
+        
+        # Generate a token for analysis
+        TOKEN_RESPONSE=$(curl -s -u admin:admin -X POST "http://localhost:9000/api/user_tokens/generate" \
+          -d "name=github-actions" \
+          -d "type=GLOBAL_ANALYSIS_TOKEN" || echo "failed")
+        
+        if [[ "$TOKEN_RESPONSE" != "failed" ]]; then
+          echo "TOKEN=$(echo $TOKEN_RESPONSE | grep -o '"token":"[^"]*' | cut -d'"' -f4)" >> $GITHUB_ENV
+        else
+          echo "TOKEN=admin" >> $GITHUB_ENV
+        fi
 
-    - name: Create Project via API (if needed)
-      run: |
-        # Try to create project via API
-        curl -X POST "http://localhost:9000/api/projects/create" \
-          -u admin:admin \
-          -d "project=Online_Book_Store&name=Online Book Store" || echo "Project may already exist"
-
-    - name: Build and Analyze
+    - name: Run Analysis with Token
+      env:
+        SONAR_TOKEN: ${{ env.TOKEN }}
       run: |
         mvn clean compile sonar:sonar \
           -Dsonar.projectKey=Online_Book_Store \
           -Dsonar.projectName="Online Book Store" \
           -Dsonar.host.url=http://localhost:9000 \
-          -Dsonar.login=admin \
-          -Dsonar.password=admin
+          -Dsonar.token=$SONAR_TOKEN
 
     - name: Stop SonarQube
       if: always()
