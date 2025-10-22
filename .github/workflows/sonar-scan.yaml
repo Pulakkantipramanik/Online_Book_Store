@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-sonar:
-    runs-on: self-hosted   # Windows self-hosted runner
+    runs-on: self-hosted
     steps:
       # 1️⃣ Checkout code
       - name: Checkout repository
@@ -43,7 +43,7 @@ jobs:
         run: |
           $env:SONAR_TOKEN="${{ secrets.SONAR_TOKEN }}"
           $env:SONAR_HOST_URL="http://localhost:9000"
-          & mvn sonar:sonar `
+          mvn sonar:sonar `
             -Dsonar.projectKey=Online_Book_Store `
             -Dsonar.projectName=Online_Book_Store `
             -Dsonar.host.url=$env:SONAR_HOST_URL `
