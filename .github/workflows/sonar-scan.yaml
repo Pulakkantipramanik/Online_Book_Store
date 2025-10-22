@@ -1,35 +1,49 @@
-name: SonarQube Test
-on: [push]
+name: SonarQube Analysis
+on:
+  push:
+    branches: [ main ]
 
 jobs:
-  sonarqube:
+  analyze:
     runs-on: ubuntu-latest
+    
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        
-    - name: Set up JDK 17
+
+    - name: Set up Java
       uses: actions/setup-java@v3
       with:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Start SonarQube (No Authentication)
+    - name: Start SonarQube with Auto-Creation Enabled
       run: |
         docker run -d --name sonarqube -p 9000:9000 \
           -e SONAR_FORCEAUTHENTICATION=false \
+          -e sonar.web.javaAdditionalOpts=-Dsonar.forceAuthentication=false \
           sonarqube:community
-        sleep 90
+        echo "Waiting for SonarQube to start..."
+        sleep 120
 
-    - name: Run SonarQube Analysis
+    - name: Create Project via API (if needed)
+      run: |
+        # Try to create project via API
+        curl -X POST "http://localhost:9000/api/projects/create" \
+          -u admin:admin \
+          -d "project=Online_Book_Store&name=Online Book Store" || echo "Project may already exist"
+
+    - name: Build and Analyze
       run: |
         mvn clean compile sonar:sonar \
           -Dsonar.projectKey=Online_Book_Store \
           -Dsonar.projectName="Online Book Store" \
           -Dsonar.host.url=http://localhost:9000 \
-          -Dsonar.forceAuthentication=false
-          
-    - name: Cleanup
+          -Dsonar.login=admin \
+          -Dsonar.password=admin
+
+    - name: Stop SonarQube
       if: always()
       run: docker rm -f sonarqube
