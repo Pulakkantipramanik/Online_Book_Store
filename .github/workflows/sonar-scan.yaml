@@ -9,6 +9,12 @@ jobs:
       with:
         fetch-depth: 0
         
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
     - name: Start SonarQube (No Authentication)
       run: |
         docker run -d --name sonarqube -p 9000:9000 \
@@ -16,13 +22,8 @@ jobs:
           sonarqube:community
         sleep 90
 
-    - name: Setup Java and Run Sonar
+    - name: Run SonarQube Analysis
       run: |
-        # Set Java environment
-        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-        export PATH=$JAVA_HOME/bin:$PATH
-        
-        # Run Maven sonar without authentication
         mvn clean compile sonar:sonar \
           -Dsonar.projectKey=Online_Book_Store \
           -Dsonar.projectName="Online Book Store" \
@@ -30,4 +31,5 @@ jobs:
           -Dsonar.forceAuthentication=false
           
     - name: Cleanup
+      if: always()
       run: docker rm -f sonarqube
