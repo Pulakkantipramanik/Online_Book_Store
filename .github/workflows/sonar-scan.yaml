@@ -16,27 +16,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 2️⃣ Start SonarQube Server using Docker
-      - name: Start SonarQube Server
-        shell: powershell
-        run: |
-          # Pull and run SonarQube in Docker
-          docker pull sonarqube:community
-          docker run -d --name sonarqube -p 9000:9000 sonarqube:community
-          # Wait for SonarQube to be ready (increased wait time)
-          Write-Host "Waiting for SonarQube to start..."
-          Start-Sleep -Seconds 60
-          # Check if SonarQube is running
-          docker ps
-
-      # 3️⃣ Set up JDK 17
+      # 2️⃣ Set up JDK 17
       - name: Set up Java 17
         uses: actions/setup-java@v3
         with:
           java-version: 17
           distribution: temurin
 
-      # 4️⃣ Cache Maven dependencies
+      # 3️⃣ Cache Maven dependencies
       - name: Cache Maven packages
         uses: actions/cache@v3
         with:
@@ -45,26 +32,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-m2
 
-      # 5️⃣ Build project with Maven
+      # 4️⃣ Build project with Maven
       - name: Build with Maven
         shell: powershell
         run: mvn clean verify -B
 
-      # 6️⃣ SonarQube Scan with default admin credentials
+      # 5️⃣ SonarQube Scan with GitHub Secrets
       - name: SonarQube Scan
         shell: powershell
         run: |
           mvn sonar:sonar `
             -Dsonar.projectKey=Online_Book_Store `
             -Dsonar.projectName="Online Book Store" `
-            -Dsonar.host.url=http://localhost:9000 `
-            -Dsonar.login=admin `
-            -Dsonar.password=admin
-
-      # 7️⃣ Clean up SonarQube container
-      - name: Stop SonarQube Container
-        if: always()
-        shell: powershell
-        run: |
-          docker stop sonarqube
-          docker rm sonarqube
+            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} `
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
