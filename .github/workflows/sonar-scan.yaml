@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-sonar:
-    runs-on: self-hosted   # আপনার Windows self-hosted runner
+    runs-on: self-hosted   # Windows self-hosted runner
     steps:
       # 1️⃣ Checkout code
       - name: Checkout repository
@@ -34,16 +34,17 @@ jobs:
 
       # 4️⃣ Build project
       - name: Build with Maven
+        shell: powershell
         run: mvn clean verify -B
 
-      # 5️⃣ SonarQube scan
+      # 5️⃣ SonarQube scan (Windows-compatible)
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v4
-        with:
-          projectBaseDir: .
-          args: >
-            -Dsonar.projectName=Online_Book_Store
-            -Dsonar.projectKey=Online_Book_Store
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: http://localhost:9000
+        shell: powershell
+        run: |
+          $env:SONAR_TOKEN="${{ secrets.SONAR_TOKEN }}"
+          $env:SONAR_HOST_URL="http://localhost:9000"
+          & mvn sonar:sonar `
+            -Dsonar.projectKey=Online_Book_Store `
+            -Dsonar.projectName=Online_Book_Store `
+            -Dsonar.host.url=$env:SONAR_HOST_URL `
+            -Dsonar.login=$env:SONAR_TOKEN
