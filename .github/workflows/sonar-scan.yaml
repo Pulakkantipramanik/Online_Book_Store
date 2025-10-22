@@ -1,46 +1,48 @@
 name: Build and SonarQube Analysis
-
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
-  build-and-sonar:
-    runs-on: self-hosted
+  build:
+    name: Build and Analyze
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Shallow clones should be disabled for better analysis
 
-      - name: Set up Java 17
+      - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           java-version: 17
-          distribution: temurin
+          distribution: 'temurin'
 
-      - name: Start SonarQube
-        shell: cmd
-        run: |
-          docker pull sonarqube:community
-          docker run -d --name sonarqube -p 9000:9000 sonarqube:community
-          timeout /t 60
+      - name: Cache SonarQube packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
 
-      - name: Build and Sonar Scan
-        shell: cmd
-        run: |
-          mvn clean verify sonar:sonar ^
-            -Dsonar.projectKey=Online_Book_Store ^
-            -Dsonar.projectName=Online_Book_Store ^
-            -Dsonar.host.url=http://localhost:9000 ^
-            -Dsonar.login=admin ^
-            -Dsonar.password=admin
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
 
-      - name: Cleanup
-        if: always()
-        shell: cmd
+      - name: Build and analyze
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
-          docker stop sonarqube
-          docker rm sonarqube
+          mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:3.10.0.2594:sonar \
+            -Dsonar.projectKey=Online_Book_Store \
+            -Dsonar.projectName="Online Book Store" \
+            -Dsonar.host.url=$SONAR_HOST_URL \
+            -Dsonar.login=$SONAR_TOKEN
