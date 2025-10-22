@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-and-sonar:
-    # Use self-hosted runner
+    # Use self-hosted Windows runner
     runs-on: self-hosted
     steps:
       # 1️⃣ Checkout code
@@ -37,10 +37,12 @@ jobs:
       # 4️⃣ Build project
       - name: Build with Maven
         run: mvn clean verify -B
+        shell: pwsh
 
       # 5️⃣ SonarQube scan
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v4
+        shell: pwsh
         with:
           projectBaseDir: .
           args: >
