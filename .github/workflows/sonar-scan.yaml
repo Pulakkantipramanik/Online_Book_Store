@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-sonar:
-    runs-on: self-hosted
+    runs-on: self-hosted   # Windows self-hosted runner
     steps:
       # 1️⃣ Checkout code
       - name: Checkout repository
@@ -32,17 +32,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-m2
 
-      # 4️⃣ Build project
+      # 4️⃣ Build project with Maven
       - name: Build with Maven
         shell: powershell
         run: mvn clean verify -B
 
-      # 5️⃣ SonarQube scan (Windows-compatible)
+      # 5️⃣ SonarQube Scan (Windows-compatible)
       - name: SonarQube Scan
         shell: powershell
         run: |
+          # Environment variables
           $env:SONAR_TOKEN="${{ secrets.SONAR_TOKEN }}"
           $env:SONAR_HOST_URL="http://localhost:9000"
+
+          # Run Sonar scanner via Maven
           mvn sonar:sonar `
             -Dsonar.projectKey=Online_Book_Store `
             -Dsonar.projectName=Online_Book_Store `
