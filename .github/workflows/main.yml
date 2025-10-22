@@ -3,13 +3,14 @@ name: Build and SonarQube Analysis
 on:
   push:
     branches:
-      - main      # your branch
+      - main
   pull_request:
     types: [opened, synchronize, reopened]
 
 jobs:
   build-and-sonar:
-    runs-on: ubuntu-latest
+    # Use self-hosted runner
+    runs-on: self-hosted
     steps:
       # 1️⃣ Checkout code
       - name: Checkout repository
@@ -40,6 +41,11 @@ jobs:
       # 5️⃣ SonarQube scan
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v4
+        with:
+          projectBaseDir: .
+          args: >
+            -Dsonar.projectName=Online_Book_Store
+            -Dsonar.projectKey=Online_Book_Store
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: http://localhost:9000
